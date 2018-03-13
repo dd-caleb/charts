@@ -1,5 +1,4 @@
 {{- if .Values.daemonset.enabled }}
-{{- if .Values.datadog.apiKey }}
 apiVersion: extensions/v1beta1
 kind: DaemonSet
 metadata:
@@ -22,6 +21,10 @@ spec:
     spec:
       {{- if .Values.daemonset.useHostNetwork }}
       hostNetwork: {{ .Values.daemonset.useHostNetwork }}
+      {{- end }}
+      {{- if .Values.datadog.initContainers }}
+      initContainers:
+{{ toYaml .Values.datadog.initContainers | indent 8 }}
       {{- end }}
       containers:
       - name: {{ .Chart.Name }}
@@ -48,11 +51,17 @@ spec:
           protocol: TCP
         {{- end }}
         env:
+          {{- if .Values.datadog.apiKey }}
           - name: DD_API_KEY
             valueFrom:
               secretKeyRef:
                 name: {{ template "datadog.fullname" . }}
                 key: api-key
+          {{ end }}
+          {{- if .Values.datadog.apiKeyFile }}
+          - name: DD_API_KEY_FILE
+            value: {{ .Values.datadog.apiKeyFile | quote }}
+          {{ end }}
           {{- if .Values.datadog.logLevel }}
           - name: DD_LOG_LEVEL
             value: {{ .Values.datadog.logLevel | quote }}
@@ -166,5 +175,4 @@ spec:
       serviceAccountName: {{ if .Values.rbac.create }}{{ template "datadog.fullname" . }}{{ else }}"{{ .Values.rbac.serviceAccountName }}"{{ end }}
   updateStrategy:
     type: {{ default "OnDelete" .Values.daemonset.updateStrategy | quote }}
-{{ end }}
 {{ end }}
